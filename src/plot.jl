@@ -232,7 +232,7 @@ function vecplot!(
 
     if add_spikes
         @assert haskey(p.records, :fire) "No fire record found in population $(p.name)"
-        spiketimes = SNN.spiketimes(p)
+        spiketimes = SNNModels.spiketimes(p)[neurons]
         @assert length(spiketimes) == size(y, 1) "The number of spiketimes $(length(spiketimes)) does not match the number of neurons $(size(y, 1)) in population $(p.name)"
         for n in eachindex(spiketimes)
             for sp in spiketimes[n]
@@ -326,6 +326,8 @@ function if_curve(model, current; neuron = 1, dt = 0.1ms, duration = 1second)
     end
     plot(current, f)
 end
+
+export rateplot
 
 # export density
 # function density(p, sym)

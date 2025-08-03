@@ -145,9 +145,9 @@ function gplot!(
     kwargs...,
 )
 
-    v, r_v = SNN.interpolated_record(population, v_sym)
-    ge, r_v = SNN.interpolated_record(population, ge_sym)
-    gi, r_v = SNN.interpolated_record(population, gi_sym)
+    v, r_v = interpolated_record(population, v_sym)
+    ge, r_v = interpolated_record(population, ge_sym)
+    gi, r_v = interpolated_record(population, gi_sym)
 
     neurons = isnothing(neurons) ? eachindex(population.N) : neurons
     r = _match_r(nothing, r_v)

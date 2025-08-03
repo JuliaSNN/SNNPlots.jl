@@ -1,23 +1,20 @@
-
-function stdp_integral(stdp_param; ΔTs = -101ms:2:101ms, fill = true)
-    ΔWs = zeros(Float32, length(ΔTs))
-    Threads.@threads for i in eachindex(ΔTs)
-        ΔT = ΔTs[i]
-        spiketime = [2000ms, 2000ms + ΔT]
-        neurons = [1, 2]
-        inputs = SpikeTimeParameter(spiketime, neurons)
-        w = zeros(Float32, 2, 2)
-        w[2, 1] = 10.0f0
-        st = Identity(N = max_neurons(inputs))
-        stim = SpikeTimeStimulusIdentity(st, :g, param = inputs)
-        syn = SpikingSynapse(st, st, :h, w = w, param = stdp_param)
-        model = merge_models(pop = st, stim = stim, syn = syn, silent = true)
-        SNN.monitor!(model.pop..., [:fire])
-        train!(model = model, duration = 3000ms, dt = 0.1ms)
-        ΔWs[i] = model.syn[1].W[1] - 10.0f0
-    end
-    return sum([w * Float32(ΔTs.step) for w in ΔWs])
+function stdp_test(stdp_param; ΔT)
+    spiketime = [2000ms, 2000ms + ΔT]
+    neurons = [1, 2]
+    inputs = SpikeTimeParameter(spiketime, neurons)
+    st = Identity(N = max_neuron(inputs))
+    stim = SpikeTimeStimulusIdentity(st, :g, param = inputs)
+    w = zeros(Float32, 2, 2)
+    w[2, 1] = 100f0
+    syn = SpikingSynapse(st, st, :h, w = w, LTPParam = stdp_param)
+    model = merge_models(;st, stim, syn, silent = true)
+    monitor!(model.pop..., [:fire])
+    train!(model = model, duration = 3000ms, dt = 0.1ms)
+    return model.syn[1].W[1] - 100f0
 end
+
+export stdp_test
+
 
 """
     stdp_kernel(stdp_param; ΔT= -97.5:5:100ms)
@@ -32,23 +29,11 @@ end
     - `Plots.Plot`: Plot of the STDP kernel
 
 """
-function stdp_kernel(stdp_param; ΔTs = -200.5:5:200ms, fill = true, kwargs...)
+function stdp_kernel(stdp_param; ΔTs = vcat(range(-200,-0.1,20), range(0.1, 200, 20)), fill = false, kwargs...)
     ΔWs = zeros(Float32, length(ΔTs))
-    # Threads.@threads 
-    for i in eachindex(ΔTs)
+    Threads.@threads for i in eachindex(ΔTs)
         ΔT = ΔTs[i]
-        spiketime = [2000ms, 2000ms + ΔT]
-        neurons = [1, 2]
-        inputs = SpikeTimeParameter(spiketime, neurons)
-        st = Identity(N = max_neuron(inputs))
-        stim = SpikeTimeStimulusIdentity(st, :g, param = inputs)
-        w = zeros(Float32, 2, 2)
-        w[2, 1] = 1.0f0
-        syn = SpikingSynapse(st, st, :h, w = w, param = stdp_param)
-        model = merge_models(pop = st, stim = stim, syn = syn, silent = true)
-        SNN.monitor!(model.pop..., [:fire])
-        train!(model = model, duration = 3000ms, dt = 0.1ms)
-        ΔWs[i] = model.syn[1].W[1] - 1.0f0
+        ΔWs[i] = stdp_test(stdp_param; ΔT)
     end
 
     n_plus = findall(ΔTs .>= 0)
@@ -80,7 +65,7 @@ function stdp_kernel(stdp_param; ΔTs = -200.5:5:200ms, fill = true, kwargs...)
     )
     plot!(ylims = extrema(ΔWs) .* 1.4, xlims = extrema(ΔTs), framestyle = :zerolines)
     plot!(; kwargs...)
-    # plot!(ylims=(-10,10), xlims=extrema(ΔTs))
+    plot!(ylims=:auto, xlims=extrema(ΔTs))
 end
 
 function stdp_weight_correlated(stdp_param, rate1, rate2, τ_cov = 10ms)
@@ -129,74 +114,14 @@ end
 function stdp_weight_decorrelated(stdp_param, rate1 = 10Hz, rate2 = 10Hz)
     st1 = Poisson(N = 50, param = PoissonParameter(rate = rate1))
     st2 = Poisson(N = 50, param = PoissonParameter(rate = rate2))
-    syn = SpikingSynapse(st1, st2, nothing, p = 1.0f0, μ = 1, param = stdp_param)
-    model = merge_models(st1 = st1, st2 = st2, syn = syn, silent = true)
+    syn = SpikingSynapse(st1, st2, nothing, p = 1.0f0, μ = 20, LTPParam = stdp_param)
+    model = merge_models(;st1, st2, syn, silent = true)
     T = 20_000ms
     train!(model = model, duration = T, dt = 0.1ms)
-    return (model.syn[1].W .- 1) / T * 60^2
+    return (model.syn.syn.W .- 20) / T * 60^2
 end
 
 #
-function plot_iSTDP_activity(network, config; interval = 1s:20ms:15s)
-    i_to_e1 = SNN.filter_items(network.syn, condition = p -> occursin("I1_to_E", p.name))
-    i_to_e2 = SNN.filter_items(network.syn, condition = p -> occursin("I2_to_E", p.name))
-    w_i1 = map(eachindex(i_to_e1)) do i
-        w, r_t = record(i_to_e1[i], :W, interpolate = true)
-        mean(w, dims = 1)[1, :]
-    end |> collect
-    w_i2 = map(eachindex(i_to_e2)) do i
-        w, r_t = record(i_to_e2[i], :W, interpolate = true)
-        mean(w, dims = 1)[1, :]
-    end |> collect
-
-    i_to_e = SNN.filter_items(network.syn, condition = p -> occursin("I1_to_E", p.name))
-    _, r_t = record(i_to_e[1], :W, interpolate = true)
-    p11 = plot(
-        r_t ./ 1000,
-        w_i1,
-        xlabel = "Time (s)",
-        ylabel = "Synaptic weight",
-        legend = :topleft,
-        title = "I to E synapse",
-        labels = ["pop 1" "pop 2" "pop 3" "pop 4"],
-        lw = 4,
-    )
-    p12 = plot(
-        r_t ./ 1000,
-        w_i2,
-        xlabel = "Time (s)",
-        ylabel = "Synaptic weight",
-        legend = :topleft,
-        title = "I to E synapse",
-        labels = ["pop 1" "pop 2" "pop 3" "pop 4"],
-        lw = 4,
-    )
-    p1 = plot(p11, p12, layout = (2, 1))
-
-    p31 = SNN.stdp_kernel(i_to_e1[1].param, fill = false)
-    p32 = SNN.stdp_kernel(i_to_e2[1].param, fill = false)
-    @unpack istdp_ratio = config
-    annotate!(p31, (0, 1), text("$(round(Int,100*(istdp_ratio)))%", 18, :black))
-    annotate!(p32, (0, 1), text("$(round(Int,100*(1-istdp_ratio)))%", 18, :black))
-    p3 = plot(p31, p32, layout = (2, 1))
-
-    Epop = SNN.filter_items(network.pop, condition = p -> occursin("E", p.name))
-    rates, interval = SNN.firing_rate(Epop, interval = interval, interpolate = false)
-    rates = mean.(rates)
-    p2 = plot(
-        interval ./ 1000,
-        rates,
-        xlabel = "Time (s)",
-        ylabel = "Firing rate (Hz)",
-        legend = :topleft,
-        title = "Firing rate of the exc. pop",
-        lw = 4,
-        labels = ["pop 1" "pop 2" "pop 3" "pop 4"],
-    )#, yscale=:log10, ylims=(0.1,50))
-    p4 = SNN.raster(network.pop, interval, every = 3)
-    plot(p3, p1, p4, p2, layout = (2, 2), size = (1800, 1800), margin = 5Plots.mm)
-    # plot(p4, p2, layout=(2,1), size=(800,800), margin=5Plots.mm)
-end
 
 
 export stp_plot,
@@ -207,4 +132,3 @@ export stp_plot,
     stdp_kernel,
     stdp_integral,
     stdp_weight_decorrelated,
-    plot_iSTDP_activity
