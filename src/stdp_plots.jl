@@ -130,5 +130,4 @@ export stp_plot,
     dendrite_gplot,
     soma_gplot,
     stdp_kernel,
-    stdp_integral,
-    stdp_weight_decorrelated,
+    stdp_weight_decorrelated
