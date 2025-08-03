@@ -5,12 +5,12 @@ function stdp_test(stdp_param; ΔT)
     st = Identity(N = max_neuron(inputs))
     stim = SpikeTimeStimulusIdentity(st, :g, param = inputs)
     w = zeros(Float32, 2, 2)
-    w[2, 1] = 100f0
+    w[2, 1] = 100.0f0
     syn = SpikingSynapse(st, st, :h, w = w, LTPParam = stdp_param)
-    model = merge_models(;st, stim, syn, silent = true)
+    model = merge_models(; st, stim, syn, silent = true)
     monitor!(model.pop..., [:fire])
     train!(model = model, duration = 3000ms, dt = 0.1ms)
-    return model.syn[1].W[1] - 100f0
+    return model.syn[1].W[1] - 100.0f0
 end
 
 export stdp_test
@@ -29,7 +29,12 @@ export stdp_test
     - `Plots.Plot`: Plot of the STDP kernel
 
 """
-function stdp_kernel(stdp_param; ΔTs = vcat(range(-200,-0.1,20), range(0.1, 200, 20)), fill = false, kwargs...)
+function stdp_kernel(
+    stdp_param;
+    ΔTs = vcat(range(-200, -0.1, 20), range(0.1, 200, 20)),
+    fill = false,
+    kwargs...,
+)
     ΔWs = zeros(Float32, length(ΔTs))
     Threads.@threads for i in eachindex(ΔTs)
         ΔT = ΔTs[i]
@@ -65,7 +70,7 @@ function stdp_kernel(stdp_param; ΔTs = vcat(range(-200,-0.1,20), range(0.1, 200
     )
     plot!(ylims = extrema(ΔWs) .* 1.4, xlims = extrema(ΔTs), framestyle = :zerolines)
     plot!(; kwargs...)
-    plot!(ylims=:auto, xlims=extrema(ΔTs))
+    plot!(ylims = :auto, xlims = extrema(ΔTs))
 end
 
 function stdp_weight_correlated(stdp_param, rate1, rate2, τ_cov = 10ms)
@@ -115,7 +120,7 @@ function stdp_weight_decorrelated(stdp_param, rate1 = 10Hz, rate2 = 10Hz)
     st1 = Poisson(N = 50, param = PoissonParameter(rate = rate1))
     st2 = Poisson(N = 50, param = PoissonParameter(rate = rate2))
     syn = SpikingSynapse(st1, st2, nothing, p = 1.0f0, μ = 20, LTPParam = stdp_param)
-    model = merge_models(;st1, st2, syn, silent = true)
+    model = merge_models(; st1, st2, syn, silent = true)
     T = 20_000ms
     train!(model = model, duration = T, dt = 0.1ms)
     return (model.syn.syn.W .- 20) / T * 60^2
