@@ -7,7 +7,7 @@ function stdp_test(stdp_param; ΔT)
     w = zeros(Float32, 2, 2)
     w[2, 1] = 100.0f0
     syn = SpikingSynapse(st, st, :h, w = w, LTPParam = stdp_param)
-    model = merge_models(; st, stim, syn, silent = true)
+    model = compose(; st, stim, syn, silent = true)
     monitor!(model.pop..., [:fire])
     train!(model = model, duration = 3000ms, dt = 0.1ms)
     return model.syn[1].W[1] - 100.0f0
@@ -94,7 +94,7 @@ function stdp_weight_correlated(stdp_param, rate1, rate2, τ_cov = 10ms)
     w = zeros(Float32, 2, 2)
     w[2, 1] = 5.0f0
     syn = SpikingSynapse(st, st, :h, w = w, param = stdp_param)
-    model = merge_models(st = st, stim = stim, syn = syn, silent = true)
+    model = compose(st = st, stim = stim, syn = syn, silent = true)
     SNN.monitor!(model.pop..., [:fire])
     train!(model = model, duration = T, dt = 0.1ms)
     return model
@@ -120,7 +120,7 @@ function stdp_weight_decorrelated(stdp_param, rate1 = 10Hz, rate2 = 10Hz)
     st1 = Poisson(N = 50, param = PoissonParameter(rate = rate1))
     st2 = Poisson(N = 50, param = PoissonParameter(rate = rate2))
     syn = SpikingSynapse(st1, st2, nothing, p = 1.0f0, μ = 20, LTPParam = stdp_param)
-    model = merge_models(; st1, st2, syn, silent = true)
+    model = compose(; st1, st2, syn, silent = true)
     T = 20_000ms
     train!(model = model, duration = T, dt = 0.1ms)
     return (model.syn.syn.W .- 20) / T * 60^2
