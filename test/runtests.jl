@@ -1,17 +1,18 @@
-using DrWatson, Test
-@quickactivate "SNNPlots"
+using SNNPlots
+# using DrWatson, Test
+# @quickactivate "SNNPlots"
 
-# Here you include files using `srcdir`
-# include(srcdir("file.jl"))
+# # Here you include files using `srcdir`
+# # include(srcdir("file.jl"))
 
-# Run test suite
-println("Starting tests")
-ti = time()
+# # Run test suite
+# println("Starting tests")
+# ti = time()
 
-@testset "SNNPlots tests" begin
-    @test 1 == 1
-end
+# @testset "SNNPlots tests" begin
+#     @test 1 == 1
+# end
 
-ti = time() - ti
-println("\nTest took total time of:")
-println(round(ti / 60, digits = 3), " minutes")
+# ti = time() - ti
+# println("\nTest took total time of:")
+# println(round(ti / 60, digits = 3), " minutes")
