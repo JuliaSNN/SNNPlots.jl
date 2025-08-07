@@ -20,12 +20,8 @@
 </p>
 </h2>
 
-
 # SNNPlots
 
 Support package to generate plots for the JuliaSNN ecosystem
 
 If you do not have specific reasons to install this package separately, we strongly advise you to install the user-facing package at:
-
-https://github.com/JuliaSNN/SpikingNeuralNetworks.jl
-
