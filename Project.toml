@@ -1,7 +1,7 @@
 name = "SNNPlots"
 uuid = "1906bf50-7128-11ef-3209-891d16f9be9f"
 authors = ["Alessio <alessio.quaresima@pasteur.fr>"]
-version = "0.2.3"
+version = "0.2.4"
 
 [deps]
 ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
@@ -23,7 +23,7 @@ LaTeXStrings = "1.4"
 Measures = "0.3"
 Parameters = "0.12"
 Plots = "1.40."
-SNNModels = "1.5"
+SNNModels = "1.5.4"
 Statistics = "1.11"
 UnPack = "1.0"
 julia = "1.11"
