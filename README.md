@@ -20,7 +20,6 @@
 </p>
 </h2>
 
-
 # SNNPlots
 
 Support package to generate plots for the JuliaSNN ecosystem
