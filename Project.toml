@@ -17,7 +17,7 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
 ColorSchemes = "3.30"
-Colors = "0.12"
+Colors = "0.12, 0.13"
 DrWatson = "2.15"
 LaTeXStrings = "1.4"
 Measures = "0.3"
