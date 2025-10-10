@@ -204,6 +204,7 @@ function vecplot!(
 
     neurons = isnothing(neurons) ? axes(y, 1) : neurons
     neurons = isa(neurons, Int) ? [neurons] : neurons
+    
 
     # check if the record is     a vector or a matrix
     if ndims(y) == 3
@@ -212,16 +213,16 @@ function vecplot!(
                 "The record is a matrix, please specify the index ($sym_id) of the matrix to plot with `sym_id`",
             ),
         ))
-        y = y[neurons, sym_id, r]
+        y = y(neurons, sym_id, r)
     else
-        y = y[neurons, r]
+        y = y(neurons, r)
     end
 
     if isa(factor, Symbol)
-        factor, r_factor = SNN.interpolated_record(p, sym)
-        factor = factor[neurons, r]
+        factor, _ = SNN.interpolated_record(p, factor)
+        factor = factor(neurons, r)
     elseif isa(factor, Matrix)
-        factor = factor[neurons, :]
+        factor = factor(neurons, :)
         @assert size(factor, 1) == length(neurons) "The factor matrix must have the same number of rows as the number of neurons"
         @assert size(factor, 2) == size(y, 2) "The factor matrix must have the same number of columns as the number of time points in the record"
     end
