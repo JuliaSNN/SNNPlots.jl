@@ -227,7 +227,7 @@ function vecplot!(
     end
 
 
-    ribbon = pop_average ? SNNModels.Statistics.std(y, dims = 1)[1,:] : nothing
+    ribbon = pop_average ? SNNModels.Statistics.std(y, dims = 1)[1, :] : nothing
     y = pop_average ? SNNModels.Statistics.mean(y, dims = 1) : y
 
     if add_spikes
