@@ -142,6 +142,7 @@ function gplot!(
     gsyn_e = 1,
     gsyn_i = 1,
     neurons = nothing,
+    r = nothing,
     kwargs...,
 )
 
@@ -150,10 +151,10 @@ function gplot!(
     gi, r_v = interpolated_record(population, gi_sym)
 
     neurons = isnothing(neurons) ? eachindex(population.N) : neurons
-    r = _match_r(nothing, r_v)
-    v = Float32.(v[neurons, r])
-    ge = Float32.(ge[neurons, r])
-    gi = Float32.(gi[neurons, r])
+    r = _match_r(r, r_v)
+    v = Float32.(v(neurons, r))
+    ge = Float32.(ge(neurons, r))
+    gi = Float32.(gi(neurons, r))
 
     @assert length(axes(ge, 1)) == length(axes(v, 1))
     @assert length(axes(ge, 2)) == length(axes(v, 2))
@@ -162,8 +163,8 @@ function gplot!(
     r = _match_r(r, r_v)
     for i in axes(ge, 2)
         for n in axes(ge, 1)
-            curr[n, 1, i] = -gsyn_e * ge[n, i] * (v[n, i] - Ee_rev)
-            curr[n, 2, i] = -gsyn_i * gi[n, i] * (v[n, i] - Ei_rev)
+            curr[n, 1, i] = gsyn_e * ge[n, i] * (v[n, i] - Ee_rev)
+            curr[n, 2, i] = gsyn_i * gi[n, i] * (v[n, i] - Ei_rev)
         end
     end
     curr .= curr ./ 1000

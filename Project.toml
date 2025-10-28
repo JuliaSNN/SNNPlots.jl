@@ -1,7 +1,7 @@
 name = "SNNPlots"
 uuid = "1906bf50-7128-11ef-3209-891d16f9be9f"
 authors = ["Alessio <alessio.quaresima@pasteur.fr>"]
-version = "0.2.4"
+version = "0.2.5"
 
 [deps]
 ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"

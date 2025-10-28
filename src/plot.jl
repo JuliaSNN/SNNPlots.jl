@@ -212,9 +212,9 @@ function vecplot!(
                 "The record is a matrix, please specify the index ($sym_id) of the matrix to plot with `sym_id`",
             ),
         ))
-        y = y[neurons, sym_id, r]
+        y = y(neurons, sym_id, r)
     else
-        y = y[neurons, r]
+        y = y(neurons, r)
     end
 
     if isa(factor, Symbol)
@@ -227,7 +227,7 @@ function vecplot!(
     end
 
 
-    ribbon = pop_average ? SNNModels.Statistics.std(y, dims = 1)[1,:] : nothing
+    ribbon = pop_average ? SNNModels.Statistics.std(y, dims = 1)[1, :] : nothing
     y = pop_average ? SNNModels.Statistics.mean(y, dims = 1) : y
 
     if add_spikes
