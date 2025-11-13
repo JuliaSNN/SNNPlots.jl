@@ -78,7 +78,13 @@ function plot_connected_neurons(
         comp = targets[1]
         _name = str_name(pre, post, comp) |> Symbol
         _m = maximum([maximum(sum(links[_name], dims = 2)[:, 1]), 3])
-        p = create_connection_histogram(connectivity, config, pre, post)
+        p = create_connection_histogram(
+            connectivity,
+            config.spatial,
+            config.network,
+            pre,
+            post,
+        )
         # N_s, N_l = count_neurons(pre, post, network, config)
         # annotate!(p,(0.1,0.8), text("Short: $(N_s)/$(N_s+N_l) \nLong: $(N_l)/$(N_s+N_l)", 12, :left, :white))
     end
@@ -114,11 +120,17 @@ function count_neurons(pre::Symbol, post::Symbol, network, config, samples = 50)
 end
 
 # Function to create a 2D histogram of connection probabilities
-function create_connection_histogram(connectivity, config, pre = :Exc, post = :Exc)
+function create_connection_histogram(
+    connectivity,
+    spatial,
+    network,
+    pre = :Exc,
+    post = :Exc,
+)
 
     @unpack points, links = connectivity
-    @unpack grid_size = config.spatial
-    @unpack connections = config
+    @unpack grid_size = spatial
+    @unpack connections = network
 
     grid_size = typeof(grid_size) <: Real ? [grid_size, grid_size] : grid_size
     @assert length(grid_size) <= 2 "Grid size must be a 2D vector [width, height]"
