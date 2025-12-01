@@ -188,7 +188,7 @@ function vecplot!(
     my_plot,
     p,
     sym;
-    variables::Symbol = :base,
+    variables = nothing,
     neurons = nothing,
     pop_average = false,
     interval = nothing,
