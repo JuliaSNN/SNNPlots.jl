@@ -1,5 +1,4 @@
-using .Plots
-import SNNModels: interpolated_record, resample_spikes
+import SNNModels: resample_spikes
 ## Raster plot
 
 
@@ -23,12 +22,29 @@ function raster(spiketimes::Spiketimes, t = nothing; kwargs...)
 end
 
 function raster(P, t = nothing; kwargs...)
-    raster!(plot(), P, t; kwargs...)
+    if _backend == :Plots
+        ax = plot(
+            m = (1, :black),
+            leg = :none,
+            xaxis = ("Time (s)", (0, Inf)),
+            yaxis = ("Neuron",),
+            label = "",
+        )
+        return raster!(ax, P, t; kwargs...)
+    elseif _backend == :Makie
+        f = Figure()
+        ax = Axis(f[1, 1], 
+            xlabel = "Time (s)",
+            ylabel = "Neuron",
+        )
+        raster!(ax, P, t; kwargs...)
+        return f
+    end
 end
 
 
 function raster!(
-    p,
+    ax,
     P,
     t = nothing;
     dt = 0.125ms,
@@ -60,23 +76,28 @@ function raster!(
     X, Y = resample_spikes(X, Y)
     X = X ./ s
 
-    plt = scatter!(
-        p,
+    scatter!(
+        ax,
         X[1:every:end],
         Y[1:every:end],
-        m = (1, :black),
-        leg = :none,
-        xaxis = ("Time (s)", (0, Inf)),
-        yaxis = ("Neuron",),
-        label = "",
+        color = :black,
+        markersize = 1,
     )
     t = typeof(t) <: AbstractRange ? t[[1, end]] : t
-    !isnothing(t) && plot!(xlims = t ./ s)
-    plot!(yticks = (cumsum(y0)[1:(end-1)] .+ (y0 ./ 2)[2:end], names), yrotation = 45)
-    y0 = y0[2:(end-1)]
-    !isempty(y0) && hline!(plt, cumsum(y0), linecolor = :red, label = "")
-    plot!(plt; kwargs...)
-    return plt
+    if _backend == :Plots
+        !isnothing(t) && plot!(xlims = t ./ s)
+        plot!(yticks = (cumsum(y0)[1:(end-1)] .+ (y0 ./ 2)[2:end], names), yrotation = 45)
+        y0 = y0[2:(end-1)]
+        !isempty(y0) && hline!(ax, cumsum(y0), linecolor = :red, label = "")
+        plot!(ax; kwargs...)
+        return ax
+    elseif _backend == :Makie
+        !isnothing(t) && Makie.xlims!(ax, t ./ s)
+        # yticks!(ax, (cumsum(y0)[1:(end-1)] .+ (y0 ./ 2)[2:end], names))
+        y0 = y0[2:(end-1)]
+        !isempty(y0) && Makie.hlines!(ax, cumsum(y0), color = :red)
+        # Makie.update_limits!(p)
+    end
 end
 
 function _raster_populations(
@@ -150,14 +171,28 @@ end
 ## Vector plot
 
 function vecplot(p, sym::Symbol; kwargs...)
-    vecplot!(plot(), p, sym; kwargs...)
+    vecplot( p, [sym]; kwargs...)
 end
 
 function vecplot(p, sym::Vector{Symbol}; kwargs...)
-    my_plot = plot()
-    for s in sym
-        vecplot!(my_plot, p, s; label = string(s), kwargs...)
+    if _backend == :Plots
+        ax = plot()
+        for s in sym
+            vecplot!(ax, p, s; label = string(s), kwargs...)
+        end
+        return ax
+    elseif _backend == :Makie
+        f = Figure()
+        ax = Axis(f[1, 1],
+            xlabel = "Time (s)";
+        )
+        for s in sym
+            vecplot!(ax, p, s; label = string(s), color = :okabe_ito)
+        end
+        axislegend(ax)
+        return f
     end
+    my_plot = plot()
     plot!(my_plot, ylims = :auto)
     return my_plot
 end
@@ -185,7 +220,7 @@ function _match_r(r, r_v)
 end
 
 function vecplot!(
-    my_plot,
+    ax,
     p,
     sym;
     neurons = nothing,
@@ -198,7 +233,7 @@ function vecplot!(
     kwargs...,
 )
     # get the record and its sampling rate
-    y, r_v = interpolated_record(p, sym)
+    y, r_v = SNNModels.record(p, sym; variables, range = true)
     r = isnothing(interval) ? r : interval
     r = _match_r(r, r_v)
 
@@ -245,18 +280,34 @@ function vecplot!(
     end
 
     @debug "Vector plot in: $(r[1])ms to $(round(Int, r[end]))ms"
-    plot!(
-        my_plot,
-        r ./ 1000,
-        y' .* factor,
-        ribbon = ribbon,
-        leg = :none,
-        xaxis = ("t", extrema(r ./ 1000)),
-        yaxis = (string(sym), extrema(y));
-        lw = 3,
-        kwargs...,
-    )
-    return plot!(; kwargs...)
+    if _backend == :Plots
+        return plot!(
+            ax,
+            r ./ 1000,
+            y' .* factor,
+            ribbon = ribbon,
+            leg = :none,
+            xaxis = ("t", extrema(r ./ 1000)),
+            yaxis = (string(sym), extrema(y));
+            lw = 3,
+            kwargs...,
+        )
+        return plot!(; kwargs...)
+    elseif _backend == :Makie
+        ll = hcat(r, y' .* factor)
+        lines!(
+            ax,
+            y,
+            ; kwargs...,
+        )
+    #         ribbon = ribbon,
+    #         leg = :none,
+    #         xaxis = ("t", extrema(r ./ 1000)),
+    #         yaxis = (string(sym), extrema(y));
+    #         lw = 3,
+    #         kwargs...,
+    # )
+    end
 end
 
 function vecplot(P, syms::Array; kwargs...)
