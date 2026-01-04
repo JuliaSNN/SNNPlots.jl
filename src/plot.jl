@@ -230,6 +230,7 @@ function vecplot!(
     sym_id = nothing,
     factor = 1.0f0,
     add_spikes = false,
+    variables = nothing,
     kwargs...,
 )
     # get the record and its sampling rate
