@@ -25,7 +25,7 @@ macro plots_default()
         lw=4
     )
 
-    ex = Expr(:block, :(default(;$(default_values)...)))
+    ex = Expr(:block, :(SNNPlots.default(;$(default_values)...)))
     esc(ex)
 end
 
