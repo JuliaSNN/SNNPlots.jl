@@ -34,6 +34,7 @@ module SNNPlots
     include("backend/makie.jl")
     include(joinpath(@__DIR__,"raster.jl"))
     include(joinpath(@__DIR__,"vecplot.jl"))
+    include(joinpath(@__DIR__,"stdp_plots.jl"))
 
     @load_units
     export raster,
@@ -44,5 +45,8 @@ module SNNPlots
         load_model,
         plot_model,
         plot_stimulus,
-        plot_connections
+        plot_connections,
+        stdp_kernel,
+        stdp_kernel!
+
 end
