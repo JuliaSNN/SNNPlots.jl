@@ -1,13 +1,13 @@
 import SNNModels: resample_spikes
 
-function raster(spiketimes::Spiketimes, t = nothing)
+function raster(spiketimes::Spiketimes, t = nothing, markersize=1)
     t = isnothing(t) ? [0, maximum(vcat(spiketimes...))] : t
     X, Y = _raster(spiketimes, t)
     X, Y = resample_spikes(X, Y)
     fig, ax, plt = scatter(
         X,
         Y,
-        markersize = 1,
+        markersize = markersize,
         color = :black,
         axis = (;
             xlabel = "Time (s)",
@@ -18,6 +18,24 @@ function raster(spiketimes::Spiketimes, t = nothing)
     ylims!(0, maximum(Y) + 1)
     t = typeof(t) <: AbstractRange ? t[[1, end]] : t
     return Makie.FigureAxisPlot(fig, ax, plt)
+end
+
+function raster!(ax, spiketimes::Spiketimes, t = nothing; markersize=1, kwargs...)
+    t = isnothing(t) ? [0, maximum(vcat(spiketimes...))] : t
+    X, Y = _raster(spiketimes, t)
+    X, Y = resample_spikes(X, Y)
+    plt = scatter!(
+        ax,
+        X,
+        Y;
+        markersize = markersize,
+        color = :black,
+        kwargs...,
+    )
+    t = typeof(t) <: AbstractRange ? t[[1, end]] : t
+    !isnothing(t) && xlims!(ax, extrema(t))
+    ylims!(ax, 0, maximum(Y) + 1)
+    return plt
 end
 
 function raster(P, t = nothing; kwargs...)
@@ -46,10 +64,10 @@ function raster!(
     ax,
     P,
     t = nothing;
-    dt = 0.125ms,
     populations = nothing,
-    # names = nothing,
+    names = nothing,
     every = 1,
+    markersize = 1,
     order::Vector = [],
     kwargs...,
 )
@@ -78,9 +96,9 @@ function raster!(
     plt = scatter!(
         ax,
         X[1:every:end],
-        Y[1:every:end],
+        Y[1:every:end];
         color = :black,
-        markersize = 1,
+        markersize
     )
     t = typeof(t) <: AbstractRange ? t[[1, end]] : t
     if _backend == :Plots
@@ -113,7 +131,7 @@ function _raster_populations(
         spiketimes_pop = all_spiketimes[pop] ## population spiketimes
         for n in eachindex(spiketimes_pop) ## neuron spiketimes
             for st in spiketimes_pop[n] ## spiketime
-                if isnothing(st) || (st > t[1] && st < t[2])
+                if isnothing(st) || (st > t[1] && st < t[end])
                     push!(x, st)
                     push!(y, n + cumsum(y0)[end])
                 end
@@ -157,10 +175,13 @@ function _raster(
         # which neurons to plot
         for n in fire[:neurons][i]
             if isnothing(interval) || (t > interval[1] && t < interval[2])
-                push!(x, t)
                 if !isempty(order)
-                    push!(y, indexin(n, order)[1])
+                    z = indexin(n, order)[1]
+                    isnothing(z) && continue
+                    push!(x, t)
+                    push!(y, z)
                 else
+                    push!(x, t)
                     push!(y, n)
                 end
             end
