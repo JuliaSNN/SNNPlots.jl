@@ -1,13 +1,13 @@
 using Makie
 
-inch = 96
-pt =4/3
-cm = inch/2.54
 
-onecolumn = (8.8cm, 13cm)
-twocolumn = (18cm, 185cm)
+# onecolumn = (8.8cm, 13cm)
+# twocolumn = (18cm, 185cm)
 
 function nature_figure(column::Int, ratio)
+    inch = 96
+    pt =4/3
+    cm = inch/2.54
     if column == 1
         width, height = 8.8cm, 22.0cm
     elseif column == 2
@@ -26,18 +26,21 @@ const okabe_ito_10 = ColorScheme(get(getfield(ColorSchemes, :okabe_ito), range(0
 macro makie_default()
     default_values = (;
         size = (600, 400),
-        fontsize = 15pt,
+        fontsize = 10pt,
+        yticklabelsize = 8pt,
+        xticklabelsize = 8pt,
         Axis = (
             xgridvisible = false,
             ygridvisible = false,
         ),
         Legend = (;
             framevisible = false,
-            labelsize = 15,
+            labelsize = 10,
         ),
         palette = (;color =  okabe_ito_10
         ),
         Band = (;cycle =:color),
+        Lines = (;cycle =:color),
     )
 
     ex = Expr(:block, :(SNNPlots.set_theme!(;$(default_values)...)))
