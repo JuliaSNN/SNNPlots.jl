@@ -97,11 +97,8 @@ function vecplot!(
         y = y(neurons, r)
     end
 
-    if pop_average
-        ribbon = pop_average ? SNNModels.Statistics.std(y, dims = 1)[1,:] : nothing
-        y = pop_average ? SNNModels.Statistics.mean(y, dims = 1) : y
-        neurons = [1]
-    end
+    ribbon = pop_average ? SNNModels.Statistics.std(y, dims = 1)[1,:] : nothing
+    y = pop_average ? SNNModels.Statistics.mean(y, dims = 1) : y
 
 
 
