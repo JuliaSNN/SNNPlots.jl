@@ -20,9 +20,11 @@ function raster(spiketimes::Spiketimes, t = nothing, markersize=1)
     return Makie.FigureAxisPlot(fig, ax, plt)
 end
 
-function raster!(ax, spiketimes::Spiketimes, t = nothing; markersize=1, kwargs...)
+function raster!(ax::Axis, spiketimes::Spiketimes, t = nothing; markersize=1, order=nothing, kwargs...)
     t = isnothing(t) ? [0, maximum(vcat(spiketimes...))] : t
-    X, Y = _raster(spiketimes, t)
+    order = isnothing(order) ? eachindex(spiketimes) : order
+
+    X, Y = _raster(spiketimes[order], t)
     X, Y = resample_spikes(X, Y)
     plt = scatter!(
         ax,

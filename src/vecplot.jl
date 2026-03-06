@@ -1,5 +1,5 @@
 # Vector plot
-
+using Statistics: quantile
 function vecplot(p, sym::Symbol; kwargs...)
     vecplot( p, [sym]; kwargs...)
 end
@@ -61,9 +61,9 @@ function vecplot!(
     factor = 1.0f0,
     add_spikes = false,
     variables = nothing,
-    labels = nothing,
     lw = 2,
     color = nothing,
+    ribbon = false,
     kwargs...,
 
 )
@@ -96,8 +96,11 @@ function vecplot!(
     else
         y = y(neurons, r)
     end
+    
 
-    ribbon = pop_average ? SNNModels.Statistics.std(y, dims = 1)[1,:] : nothing
+    
+    band_up = pop_average && ribbon ? [quantile(y[:, t], 0.8) for t in axes(y, 2)] : nothing
+    band_down = pop_average && ribbon ? [quantile(y[:, t], 0.2) for t in axes(y, 2)] : nothing
     y = pop_average ? SNNModels.Statistics.mean(y, dims = 1) : y
 
 
@@ -132,13 +135,13 @@ function vecplot!(
         return plot!(; kwargs...)
     elseif _backend == :Makie
         my_color = isnothing(color) ? x->Cycled(x) : x->color
-        isnothing(ribbon) || band!(
+        isnothing(band_down) || band!(
             ax,
             r,
-            (y[1,:] .- ribbon) .* factor',
-            (y[1,:] .+ ribbon) .* factor',
+            (band_down) .* factor',
+            (band_up) .* factor',
             color = my_color(1),
-            alpha= 0.5,
+            alpha= 0.7,
         )
         plt = nothing
         for n in axes(y, 1)
