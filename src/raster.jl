@@ -112,7 +112,7 @@ function raster!(
         return ax
     elseif _backend == :Makie
         !isnothing(t) && Makie.xlims!(ax, t ./ s)
-        ax.yticks = (cumsum(y0)[1:(end-1)] .+ (y0 ./ 2)[2:end], [n[1:minimum([10, length(n)])] for n in names])
+        ax.yticks = (cumsum(y0)[1:(end-1)] .+ (y0 ./ 2)[2:end], [n[1:minimum([10, length(n)])] for n in string.(names)])
         ax
         y0 = y0[1:(end)]
         !isempty(y0) && Makie.hlines!(ax, cumsum(y0), color = :red, linewidth = 1, label = "", linestyle = :dash)
