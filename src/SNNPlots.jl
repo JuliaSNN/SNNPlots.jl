@@ -1,39 +1,52 @@
 module SNNPlots
 
-using Plots
-using ColorSchemes
-using LaTeXStrings
-using Measures
-using SNNModels
-import SNNModels: AbstractPopulation, AbstractStimulus, AbstractConnection
-using UnPack
-using Parameters
-@load_units
+    using ColorSchemes
+    using LaTeXStrings
+    using Measures
+    using SNNModels
+    import SNNModels: AbstractPopulation, AbstractStimulus, AbstractConnection
+    using UnPack
+    using Parameters
+    using Requires
 
-include("plot.jl")
-include("extra_plots.jl")
-include("stdp_plots.jl")
-include("spatial.jl")
+    _backend = nothing
+    function __init__()
+        # @require Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80" include("backend/plots.jl")
+        # @require Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a" include("backend/makie.jl")
 
-default(fg_legend = :transparent)
-default(bg_legend = :transparent)
-default(xguidefontsize = 15)
-default(yguidefontsize = 15)
-default(ytickfontsize = 12)
-default(xtickfontsize = 12)
-default(legend_title_font_halign = :right)
-default(legend_title_font_pointsize = 14)
-default(legend_font_pointsize = 11)
-default(margins = 5Plots.mm)
+        # if _backend == :Makie
+        #     @info "Makie backend set with default settings"
+        #     include(joinpath(@__DIR__,"raster.jl"))
+        #     include(joinpath(@__DIR__,"vecplot.jl"))
+        # end
+        # if _backend == :Plots
+        #     @info "Plots backend set with default settings"
+        #     include(joinpath(@__DIR__,"raster.jl"))
+        #     include(joinpath(@__DIR__,"vecplot.jl"))
+        #     include(joinpath(@__DIR__,"other_plots.jl"))
+        #     include(joinpath(@__DIR__,"extra_plots.jl"))
+        #     include(joinpath(@__DIR__,"stdp_plots.jl"))
+        #     include(joinpath(@__DIR__,"spatial.jl"))
+        # end
+    end
 
+    # end
+    include("backend/makie.jl")
+    include(joinpath(@__DIR__,"raster.jl"))
+    include(joinpath(@__DIR__,"vecplot.jl"))
+    include(joinpath(@__DIR__,"stdp_plots.jl"))
 
-export raster,
-    vecplot,
-    plot,
-    plot!,
-    save_model,
-    load_model,
-    plot_model,
-    plot_stimulus,
-    plot_connections
+    @load_units
+    export raster,
+        vecplot,
+        plot,
+        plot!,
+        save_model,
+        load_model,
+        plot_model,
+        plot_stimulus,
+        plot_connections,
+        stdp_kernel,
+        stdp_kernel!
+
 end
