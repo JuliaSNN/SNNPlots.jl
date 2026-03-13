@@ -35,6 +35,7 @@ module SNNPlots
     include(joinpath(@__DIR__,"raster.jl"))
     include(joinpath(@__DIR__,"vecplot.jl"))
     include(joinpath(@__DIR__,"stdp_plots.jl"))
+    include(joinpath(@__DIR__,"spatial.jl"))
 
     @load_units
     export raster,
