@@ -81,7 +81,7 @@ end
 
 
 """
-    plot_connection_distances(fig, connectivity, config)
+    plot_connection_distances(fig; ds, rs)
 
 Computes and plots the distribution of connection distances for different presynaptic populations
 to the excitatory (`:Exc`) population.
@@ -93,9 +93,8 @@ populations (`:Exc`, `:PV`, `:SST`) to all postsynaptic `:Exc` neurons. It then 
 
 # Arguments
 - `fig`: The Makie `Figure` object to plot into.
-- `connectivity`: A structure containing neuron `points` (locations) and `links` (adjacency matrices).
-- `config`: The network configuration object, containing `network` and `spatial` parameters.
-- populations : Vector{Symbol} = [:Exc, :PV, :SST] (optional): The presynaptic populations to analyze. Defaults to all three.
+- `ds`: A dictionary containing the binned connection counts for each presynaptic population.
+- `rs`: The edges of the distance bins used for histogramming the connection distances.
 """
 function plot_connection_distances(fig; ds, rs)
 
