@@ -126,7 +126,7 @@ rec[:, 1, 1, 1]
 pcond = begin
     p = plot()
     ll = ["AMPA", "NMDA", "GABAa", "GABAb"]
-    for (n, name) in enumerate(fieldnames(Synapse))
+    for (n, name) in enumerate(fieldnames(Receptors))
         try
             g = [getfield(getfield(Esyn_soma, name), :gsyn)]
             bar!([n - 0.3], g, c = :orange, barwidths = 0.2, label = "")
