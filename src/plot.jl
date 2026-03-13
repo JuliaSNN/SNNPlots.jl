@@ -1,5 +1,5 @@
 using .Plots
-import SNNModels: interpolated_record, resample_spikes
+import SNNModels: resample_spikes
 ## Raster plot
 
 
@@ -188,6 +188,7 @@ function vecplot!(
     my_plot,
     p,
     sym;
+    variables = nothing,
     neurons = nothing,
     pop_average = false,
     interval = nothing,
@@ -198,7 +199,7 @@ function vecplot!(
     kwargs...,
 )
     # get the record and its sampling rate
-    y, r_v = interpolated_record(p, sym)
+    y, r_v = record(p, sym; variables, range = true)
     r = isnothing(interval) ? r : interval
     r = _match_r(r, r_v)
 
@@ -218,7 +219,7 @@ function vecplot!(
     end
 
     if isa(factor, Symbol)
-        factor, r_factor = SNN.interpolated_record(p, sym)
+        factor, r_factor = SNN.record(p, sym, range=true)
         factor = factor[neurons, r]
     elseif isa(factor, Matrix)
         factor = factor[neurons, :]

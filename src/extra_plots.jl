@@ -40,8 +40,8 @@ function dendrite_gplot(
     indices =
         haskey(population.records[:indices], g_sym) ? population.records[:indices][g_sym] :
         1:population.N
-    v, r_v = interpolated_record(population, v_sym)
-    g, r_v = interpolated_record(population, g_sym)
+    v, r_v = record(population, v_sym, range=true)
+    g, r_v = record(population, g_sym, range=true)
     r = _match_r(r, r_v)
     v = Float32.(v[indices, r])
     g = Float32.(g[:, :, r])
@@ -101,9 +101,9 @@ function soma_gplot(population; neuron = 1, r, param = :soma_syn, ax = plot(), k
     indices =
         haskey(population.records[:indices], ge_sym) ?
         population.records[:indices][ge_sym] : 1:population.N
-    v, r_v = interpolated_record(population, v_sym)
-    ge, r_v = interpolated_record(population, ge_sym)
-    gi, r_v = interpolated_record(population, gi_sym)
+        v, r_v =  record(population, v_sym, range=true)
+        ge, r_v = record(population, ge_sym, range=true)
+        gi, r_v = record(population, gi_sym, range=true)
 
     r = _match_r(r, r_v)
     v = Float32.(v[indices, r])
@@ -146,9 +146,9 @@ function gplot!(
     kwargs...,
 )
 
-    v, r_v = interpolated_record(population, v_sym)
-    ge, r_v = interpolated_record(population, ge_sym)
-    gi, r_v = interpolated_record(population, gi_sym)
+    v, r_v = record(population, v_sym, range=true)
+    ge, r_v = record(population, ge_sym, range=true)
+    gi, r_v = record(population, gi_sym, range=true)
 
     neurons = isnothing(neurons) ? eachindex(population.N) : neurons
     r = _match_r(r, r_v)
@@ -395,8 +395,8 @@ export soma_gplot, dendrite_gplot, plot_activity, plot_weights
 """
 function stp_plot(model, interval, assemblies, stimuli = []; every = 10)
     @unpack pop, syn = model
-    ρ, r_t = SNN.interpolated_record(syn.EE, :ρ)
-    w, r_t = SNN.interpolated_record(syn.EE, :W)
+    ρ, r_t = SNN.record(syn.EE, :ρ, range=true)
+    w, r_t = SNN.record(syn.EE, :W, range=true)
     weff = ρ .* w ./ maximum(w)
     in_assembly = 1:length(indices(syn.EE, assemblies[1].neurons, assemblies[1].neurons))
     out_assembly = (length(in_assembly)+1):size(weff, 1)
@@ -576,7 +576,7 @@ function plot_average_word_activity(
     after = 300ms,
     zscore = true,
 )
-    membrane, r_v = SNN.interpolated_record(model.pop.E, sym)
+    membrane, r_v = SNN.record(model.pop.E, sym, range=true)
     myintervals = sign_intervals(word, seq)
     Trange = (-before):1ms:(diff(myintervals[1])[1]+after)
     activity = zeros(length(seq.symbols.words), size(Trange, 1))
