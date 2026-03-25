@@ -64,6 +64,7 @@ function vecplot!(
     lw = 2,
     color = nothing,
     ribbon = false,
+    label = nothing,
     kwargs...,
 
 )
@@ -151,7 +152,7 @@ function vecplot!(
                 y[n, :] .* factor',
                 color = my_color(n),
                 linewidth = lw,
-                # labels = labels,
+                label = isnothing(label) ? string(sym) : label,
             )
         end
 
