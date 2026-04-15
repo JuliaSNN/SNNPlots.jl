@@ -23,7 +23,7 @@ function plot_spatial_connectivity(fig, connectivity, config; post = :Exc, n0::I
     colors = okabe_ito_10[[8, 2, 3]]
     shapes = [:utriangle, :circle, :hexagon]
     xy, xyns, vs, cs, ms_list = Point2f[], Point2f[], Vec2f[], Any[], Symbol[]
-    ax = Axis(fig[1, 1], aspect = DataAspect(), xlabel="Spatial position (mm)", ylabel="Spatial position (mm)", xticks = (range(0, 0.1, 5), string.(range(0, 1, 5))), yticks = (range(0, 0.1, 5), string.(range(0, 1, 5))))
+    ax = Axis(fig[1:2, 1:2], aspect = DataAspect(), xlabel="Spatial position (mm)", ylabel="Spatial position (mm)", xticks = (range(0, 0.1, 5), string.(range(0, 1, 5))), yticks = (range(0, 0.1, 5), string.(range(0, 1, 5))))
 
     for (pre, c, n, ms) in zip([:Exc, :PV, :SST], colors, 1:3, shapes)
         d = []
@@ -47,7 +47,7 @@ function plot_spatial_connectivity(fig, connectivity, config; post = :Exc, n0::I
 
         Makie.scatter!(ax, xy,
             color = c,
-            markersize = 4,
+            markersize = 2,
             alpha = 0.5,
             marker = ms
         )
@@ -60,9 +60,8 @@ function plot_spatial_connectivity(fig, connectivity, config; post = :Exc, n0::I
             v = xy0 .- xyns[n]
             Makie.arrows2d!(ax, xyns[n], v, shaftwidth = 1, tiplength=0, color=cs[n], alpha=0.1)
         end
-        Makie.scatter!(ax, xyns[n], color = cs[n], markersize = 11, marker = ms_list[n], 
-            strokecolor = :black,
-            strokewidth = 1,
+        Makie.scatter!(ax, xyns[n], color = cs[n], markersize = 5, marker = ms_list[n], 
+            strokewidth = 0.1,
         )
     end
     Makie.scatter!(ax,
@@ -74,9 +73,9 @@ function plot_spatial_connectivity(fig, connectivity, config; post = :Exc, n0::I
         color = :white
     )
     markers = map(zip(shapes, colors)) do (ms, c)
-        MarkerElement(color = c, marker = ms, markersize = 18, strokecolor = :black, strokewidth = 1)
+        MarkerElement(color = c, marker = ms, markersize = 10)
     end
-    Legend(fig[0,1],  markers, ["Exc", "PV", "SST"], position = :rt, "Pre-synaptic \npopulation", orientation = :horizontal)
+    Legend(fig[0,1:2],  markers, ["Exc", "PV", "SST"], position = :rt, "Pre-synaptic population", orientation = :horizontal, tellheight=false, tellwidth = false)
 end
 
 
@@ -99,8 +98,8 @@ populations (`:Exc`, `:PV`, `:SST`) to all postsynaptic `:Exc` neurons. It then 
 function plot_connection_distances(fig; ds, rs)
 
     shapes = [:utriangle, :circle, :hexagon]
-    ax1 = Axis(fig[1,1:2], xlabel="Distance (mm)", ylabel="Connection density", )
-    ax2 = Axis(fig[1,3:4], xlabel="Distance (mm)", ylabel="Connection probability", )
+    ax1 = Axis(fig[1,1], xlabel="Distance (mm)", ylabel="Conn. density", )
+    ax2 = Axis(fig[1,2], xlabel="Distance (mm)", ylabel="Conn. probability")
     post = :Exc
     scaled_ws = Float32[]
     ws = Float32[]
@@ -123,11 +122,11 @@ function plot_connection_distances(fig; ds, rs)
     barplot!(ax1, xxs.*10, ws, dodge=grp, color = colors, label = ["Exc", "PV", "SST"])
 
     colors = okabe_ito_10[[8, 2, 3]]
-    markers = map(zip(shapes, colors)) do (ms, c)
-        PolyElement(;color=c)
-    end
-    axislegend(ax2, position = :rt)
-    axislegend(ax1, markers, ["Exc", "PV", "SST"], position = :rt)
+    # markers = map(zip(shapes, colors)) do (ms, c)
+    #     PolyElement(;color=c)
+    # end
+    # axislegend(ax2, position = :rt)
+    # axislegend(ax1, markers, ["Exc", "PV", "SST"], position = :rt)
 end
 
 export plot_spatial_connectivity, plot_connection_distances
