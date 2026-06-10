@@ -66,6 +66,7 @@ function raster!(
     ax,
     P,
     t = nothing;
+    interval = nothing,
     populations = nothing,
     names = nothing,
     every = 1,
@@ -73,6 +74,7 @@ function raster!(
     order::Vector = [],
     kwargs...,
 )
+    t = isnothing(t) ? interval : t
     if isnothing(populations)
         y0 = Int32[0]
         X = Float32[]
@@ -145,11 +147,12 @@ function _raster_populations(
 end
 
 function _raster(spiketimes::Spiketimes, t = nothing; order = [])
-    t, X, Y = t[[1, end]], Float32[], Float32[]
+    t = isnothing(t) ? nothing : t[[1, end]]
+    X, Y = Float32[], Float32[]
     order = isempty(order) ? eachindex(spiketimes) : order
     for n in order
         for st in spiketimes[n]
-            if isnothing(st) || (st > t[1] && st < t[2])
+            if isnothing(t) || (st > t[1] && st < t[2])
                 push!(X, st)
                 push!(Y, n)
             end
