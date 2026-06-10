@@ -168,26 +168,8 @@ function _raster(
     order = [],
 ) where {T<:Union{AbstractPopulation,AbstractStimulus}}
     !haskey(p.records, :fire) && @error "No fire record found in population $(p.name)"
-    fire = p.records[:fire]
-    x, y = Float32[], Float32[]
-    y0 = Int32[]
     interval = typeof(interval) <: AbstractRange ? interval[[1, end]] : interval
-    for i in eachindex(fire[:time])
-        t = fire[:time][i]
-        # which neurons to plot
-        for n in fire[:neurons][i]
-            if isnothing(interval) || (t > interval[1] && t < interval[2])
-                if !isempty(order)
-                    z = indexin(n, order)[1]
-                    isnothing(z) && continue
-                    push!(x, t)
-                    push!(y, z)
-                else
-                    push!(x, t)
-                    push!(y, n)
-                end
-            end
-        end
-    end
-    return x, y, y0
+    st = SNNModels.spiketimes(p; interval)
+    x, y = _raster(st, interval; order)
+    return x, y, Int32[]
 end
