@@ -1,81 +1,99 @@
 """
-    plot_spatial_connectivity(fig, connectivity, config; post = :Exc, n0::Int = rand(1:20))
+    plot_spatial_connectivity(fig, connectivity, config; ...)
 
 Visualizes the spatial layout of neuronal populations and their connections to a single postsynaptic neuron.
 
-This function plots all neurons from the excitatory (Exc), PV, and SST populations with distinct markers. 
-For a specified postsynaptic neuron (`n0` from population `post`), it highlights all presynaptic neurons 
-that form a connection to it and draws arrows indicating these connections.
+Plots all neurons from Exc, PV, SST populations with distinct markers. For a specified postsynaptic
+neuron (`n0` from population `post`), highlights all presynaptic neurons connected to it and draws
+arrows indicating those connections.
 
 # Arguments
-- `fig`: The Makie `Figure` object to plot into.
-- `connectivity`: A structure containing neuron `points` (locations) and `links` (adjacency matrices).
-- `config`: The network configuration object, containing parameters for `network` and `spatial` properties.
-- `post::Symbol`: The symbol for the postsynaptic population (default: `:Exc`).
-- `n0::Int`: The index of the target postsynaptic neuron within its population.
+- `fig`: Makie figure or GridLayout position to plot into.
+- `connectivity`: structure containing neuron `points` (locations) and `links` (adjacency matrices).
+- `config`: network configuration, containing `network` and `spatial` properties.
+- `post::Symbol`: postsynaptic population (default: `:Exc`).
+- `n0::Int`: index of the target postsynaptic neuron.
+- `do_arrows::Bool`: draw connection arrows (default: `true`).
+- `rotation::Symbol`: `:horizontal` (default, x = tonotopic) or `:vertical` (swap x↔y axes).
+- `xlabel`, `ylabel`: axis labels for the x-data and y-data axes; default `""`. Swapped automatically
+  when `rotation = :vertical`. The Legend is unaffected by rotation.
 """
-function plot_spatial_connectivity(fig, connectivity, config; post = :Exc, n0::Int = rand(1:20), do_arrows = true)
+function plot_spatial_connectivity(fig, connectivity, config;
+        post      = :Exc,
+        n0::Int   = rand(1:20),
+        do_arrows = true,
+        rotation::Symbol = :horizontal,
+        xlabel    = "",
+        ylabel    = "",
+        do_legend = true)
+
     @unpack points, links = connectivity
     @unpack network, spatial = config
     @unpack recurrence, Npop = network
     @unpack connections = recurrence
     @unpack grid_size = spatial
+
     colors = okabe_ito_10[[8, 2, 3]]
     shapes = [:utriangle, :circle, :hexagon]
-    xy, xyns, vs, cs, ms_list = Point2f[], Point2f[], Vec2f[], Any[], Symbol[]
-    ax = Axis(fig[1:2, 1:2], aspect = DataAspect(), xlabel="Spatial position (mm)", ylabel="Spatial position (mm)", xticks = (range(0, 0.1, 5), string.(range(0, 1, 5))), yticks = (range(0, 0.1, 5), string.(range(0, 1, 5))))
+    ticks  = (range(0, 0.1, 5), string.(range(0, 1, 5)))
 
-    for (pre, c, n, ms) in zip([:Exc, :PV, :SST], colors, 1:3, shapes)
-        d = []
+    # swap x↔y for :vertical; identity for :horizontal
+    pt = rotation == :vertical ? (x, y) -> Point2f(y, x) : (x, y) -> Point2f(x, y)
+    ax_xlabel = rotation == :vertical ? ylabel : xlabel
+    ax_ylabel = rotation == :vertical ? xlabel : ylabel
+
+    xyns, cs, ms_list = Point2f[], Any[], Symbol[]
+    ax = Axis(fig[1:2, 1:2];
+            #   aspect  = DataAspect(),
+              xlabel  = ax_xlabel,
+              ylabel  = ax_ylabel,
+              xticks  = ticks,
+              yticks  = ticks)
+
+    for (pre, c, ms) in zip([:Exc, :PV, :SST], colors, shapes)
         w = []
-        for n = eachindex(points[pre])
-            conn = network.recurrence.connections[name(pre, post)]
+        for n in eachindex(points[pre])
+            conn    = network.recurrence.connections[name(pre, post)]
             targets = haskey(conn, :target) ? config.network.targets[conn.target] : [nothing]
-            comp = targets[1]
-            _name = str_name(pre, post, comp)
-            ll = links[Symbol(_name)][n0, n]
-            push!(w, ll)
+            comp    = targets[1]
+            _name   = str_name(pre, post, comp)
+            push!(w, links[Symbol(_name)][n0, n])
         end
 
-        x = [points[pre][i][1] for i in eachindex(points[pre])]
-        y = [points[pre][i][2] for i in eachindex(points[pre])]
-        xy = Point2f.(x, y)
-        xyn = Point2f.(x[findall(x->x==1, w)], y[findall(x->x==1, w)])
+        x  = [points[pre][i][1] for i in eachindex(points[pre])]
+        y  = [points[pre][i][2] for i in eachindex(points[pre])]
+        xy = pt.(x, y)
+        xyn = pt.(x[findall(v -> v == 1, w)], y[findall(v -> v == 1, w)])
         append!(xyns, xyn)
         append!(cs, fill(c, length(xyn)))
         append!(ms_list, fill(ms, length(xyn)))
 
-        Makie.scatter!(ax, xy,
-            color = c,
-            markersize = 2,
-            alpha = 0.5,
-            marker = ms
-        )
+        Makie.scatter!(ax, xy; color = c, markersize = 2, alpha = 0.5, marker = ms)
     end
 
-    xy0 = Point2f(points[post][n0][1], points[post][n0][2])
+    xy0 = pt(points[post][n0][1], points[post][n0][2])
 
     for n in eachindex(xyns)
         if do_arrows
             v = xy0 .- xyns[n]
-            Makie.arrows2d!(ax, xyns[n], v, shaftwidth = 1, tiplength=0, color=cs[n], alpha=0.1)
+            Makie.arrows2d!(ax, xyns[n], v; shaftwidth = 1, tiplength = 0, color = cs[n], alpha = 0.1)
         end
-        Makie.scatter!(ax, xyns[n], color = cs[n], markersize = 5, marker = ms_list[n], 
-            strokewidth = 0.1,
-        )
+        Makie.scatter!(ax, xyns[n]; color = cs[n], markersize = 5, marker = ms_list[n], strokewidth = 0.1)
     end
-    Makie.scatter!(ax,
-        xy0,
-        marker=:cross,
-        markersize = 15,
-        strokecolor = :black,
-        strokewidth = 2,
-        color = :white
-    )
+    Makie.scatter!(ax, xy0; marker = :cross, markersize = 15, strokecolor = :black, strokewidth = 2, color = :white)
+
     markers = map(zip(shapes, colors)) do (ms, c)
         MarkerElement(color = c, marker = ms, markersize = 10)
     end
-    Legend(fig[0,1:2],  markers, ["Exc", "PV", "SST"], position = :rt, "Pre-synaptic population", orientation = :horizontal, tellheight=false, tellwidth = false)
+    if do_legend 
+        Legend(fig[0,1:2], markers, ["Exc", "PV", "SST"],
+            ""; position = :rt, orientation = :horizontal,
+            tellheight = false, tellwidth = false)
+        return ax
+    else
+    legend_info = (; markers, labels = ["Exc", "PV", "SST"], position = :rt, orientation = :horizontal, tellheight = false, tellwidth = false)
+    return (ax, legend_info)
+    end
 end
 
 
@@ -95,11 +113,12 @@ populations (`:Exc`, `:PV`, `:SST`) to all postsynaptic `:Exc` neurons. It then 
 - `ds`: A dictionary containing the binned connection counts for each presynaptic population.
 - `rs`: The edges of the distance bins used for histogramming the connection distances.
 """
-function plot_connection_distances(fig; ds, rs)
+function plot_connection_distances(fig; ds, rs, probability = true)
 
-    shapes = [:utriangle, :circle, :hexagon]
     ax1 = Axis(fig[1,1], xlabel="Distance (mm)", ylabel="Conn. density", )
-    ax2 = Axis(fig[1,2], xlabel="Distance (mm)", ylabel="Conn. probability")
+    if probability
+        ax2 = Axis(fig[1,2], xlabel="Distance (mm)", ylabel="Conn. probability")
+    end
     post = :Exc
     scaled_ws = Float32[]
     ws = Float32[]
@@ -111,7 +130,9 @@ function plot_connection_distances(fig; ds, rs)
         w = ds[name(pre, post)] 
         append!(ws, copy(w./sum(w)))
         w = w./rs[2:end].^2
-        lines!(ax2, xs.*10, w./sum(w) , label = string(pre), color = colors[n], linewidth=4)
+        if probability
+            lines!(ax2, xs.*10, w./sum(w) , label = string(pre), color = colors[n], linewidth=4)
+        end
         append!(scaled_ws, copy(w./sum(w)))
         append!(grp, fill(n, length(w)))
     end

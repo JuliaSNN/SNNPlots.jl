@@ -15,7 +15,7 @@ function raster(spiketimes::Spiketimes, t = nothing, markersize=1)
         ),
     )
     xlims!(ax, extrema(t))
-    ylims!(0, maximum(Y) + 1)
+    isempty(Y) || ylims!(0, maximum(Y) + 1)
     t = typeof(t) <: AbstractRange ? t[[1, end]] : t
     return Makie.FigureAxisPlot(fig, ax, plt)
 end
@@ -36,7 +36,7 @@ function raster!(ax::Axis, spiketimes::Spiketimes, t = nothing; markersize=1, or
     )
     t = typeof(t) <: AbstractRange ? t[[1, end]] : t
     !isnothing(t) && xlims!(ax, extrema(t))
-    ylims!(ax, 0, maximum(Y) + 1)
+    isempty(Y) || ylims!(ax, 0, maximum(Y) + 1)
     return plt
 end
 
@@ -116,7 +116,7 @@ function raster!(
         ax
         y0 = y0[1:(end)]
         !isempty(y0) && Makie.hlines!(ax, cumsum(y0), color = :red, linewidth = 1, label = "", linestyle = :dash)
-        ylims!(0, maximum(Y) + 1)
+        isempty(Y) || ylims!(0, maximum(Y) + 1)
         return plt
     end
 end
