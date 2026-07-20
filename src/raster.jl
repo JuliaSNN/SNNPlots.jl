@@ -15,7 +15,7 @@ function raster(spiketimes::Spiketimes, t = nothing, markersize=1)
         ),
     )
     xlims!(ax, extrema(t))
-    ylims!(0, maximum(Y) + 1)
+    isempty(Y) || ylims!(0, maximum(Y) + 1)
     t = typeof(t) <: AbstractRange ? t[[1, end]] : t
     return Makie.FigureAxisPlot(fig, ax, plt)
 end
@@ -36,7 +36,7 @@ function raster!(ax::Axis, spiketimes::Spiketimes, t = nothing; markersize=1, or
     )
     t = typeof(t) <: AbstractRange ? t[[1, end]] : t
     !isnothing(t) && xlims!(ax, extrema(t))
-    ylims!(ax, 0, maximum(Y) + 1)
+    isempty(Y) || ylims!(ax, 0, maximum(Y) + 1)
     return plt
 end
 
@@ -66,6 +66,7 @@ function raster!(
     ax,
     P,
     t = nothing;
+    interval = nothing,
     populations = nothing,
     names = nothing,
     every = 1,
@@ -73,6 +74,7 @@ function raster!(
     order::Vector = [],
     kwargs...,
 )
+    t = isnothing(t) ? interval : t
     if isnothing(populations)
         y0 = Int32[0]
         X = Float32[]
@@ -116,7 +118,7 @@ function raster!(
         ax
         y0 = y0[1:(end)]
         !isempty(y0) && Makie.hlines!(ax, cumsum(y0), color = :red, linewidth = 1, label = "", linestyle = :dash)
-        ylims!(0, maximum(Y) + 1)
+        isempty(Y) || ylims!(0, maximum(Y) + 1)
         return plt
     end
 end
@@ -145,11 +147,12 @@ function _raster_populations(
 end
 
 function _raster(spiketimes::Spiketimes, t = nothing; order = [])
-    t, X, Y = t[[1, end]], Float32[], Float32[]
+    t = isnothing(t) ? nothing : t[[1, end]]
+    X, Y = Float32[], Float32[]
     order = isempty(order) ? eachindex(spiketimes) : order
     for n in order
         for st in spiketimes[n]
-            if isnothing(st) || (st > t[1] && st < t[2])
+            if isnothing(t) || (st > t[1] && st < t[2])
                 push!(X, st)
                 push!(Y, n)
             end
@@ -168,26 +171,8 @@ function _raster(
     order = [],
 ) where {T<:Union{AbstractPopulation,AbstractStimulus}}
     !haskey(p.records, :fire) && @error "No fire record found in population $(p.name)"
-    fire = p.records[:fire]
-    x, y = Float32[], Float32[]
-    y0 = Int32[]
     interval = typeof(interval) <: AbstractRange ? interval[[1, end]] : interval
-    for i in eachindex(fire[:time])
-        t = fire[:time][i]
-        # which neurons to plot
-        for n in fire[:neurons][i]
-            if isnothing(interval) || (t > interval[1] && t < interval[2])
-                if !isempty(order)
-                    z = indexin(n, order)[1]
-                    isnothing(z) && continue
-                    push!(x, t)
-                    push!(y, z)
-                else
-                    push!(x, t)
-                    push!(y, n)
-                end
-            end
-        end
-    end
-    return x, y, y0
+    st = SNNModels.spiketimes(p; interval)
+    x, y = _raster(st, interval; order)
+    return x, y, Int32[]
 end

@@ -4,20 +4,6 @@ using Makie
 # onecolumn = (8.8cm, 13cm)
 # twocolumn = (18cm, 185cm)
 
-function nature_figure(column::Int, ratio)
-    inch = 96
-    pt =4/3
-    cm = inch/2.54
-    if column == 1
-        width, height = 8.8cm, 22.0cm
-    elseif column == 2
-        width, height = 18cm, 22.5cm
-    else
-        error("Column must be 1 or 2")
-    end
-    return (width, height*ratio)
-end
-
 _backend = :Makie
 @info "Using Makie backend for plotting"
 
@@ -48,6 +34,4 @@ macro makie_default()
 end
 
 @makie_default
-
-
 export @makie_default, default_colors, inch, cm, pt, nature_figure, okabe_ito_10
