@@ -52,17 +52,14 @@ module SNNPlots
     include(joinpath(@__DIR__,"spatial.jl"))
 
     @load_units
-    # `plot`, `plot!` are re-exported from Makie and `save_model`, `load_model` from SNNModels;
-    # `plot_model`, `plot_stimulus`, `plot_connections` are not defined in SNNPlots 0.2.10.
+    # `plot`, `plot!` are re-exported from Makie and `save_model`, `load_model` from SNNModels.
     export raster,
+        raster!,
         vecplot,
         plot,
         plot!,
         save_model,
         load_model,
-        plot_model,
-        plot_stimulus,
-        plot_connections,
         stdp_kernel,
         stdp_kernel!
 

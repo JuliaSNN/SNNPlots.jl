@@ -1,7 +1,7 @@
 import SNNModels: resample_spikes
 
 """
-    raster(spiketimes::Spiketimes, t = nothing, markersize = 1)
+    raster(spiketimes::Spiketimes, t = nothing; markersize = 1)
     raster(P, t = nothing; kwargs...)
 
 Raster plot of spike times in a new Makie figure. Returns a `Makie.FigureAxisPlot`
@@ -9,11 +9,12 @@ Raster plot of spike times in a new Makie figure. Returns a `Makie.FigureAxisPlo
 
 Two methods:
 
-- `raster(spiketimes, t, markersize)`: `spiketimes` is a `Spiketimes`
+- `raster(spiketimes, t; markersize)`: `spiketimes` is a `Spiketimes`
   (`Vector{Vector{Float32}}`, one vector of spike times in ms per neuron, as returned by
   `spiketimes(pop)`). `t` is the time window `[t_start, t_end]` in ms (default
-  `[0, latest spike]`); `markersize` is positional. Neuron `n` is drawn on row `n`. Spike times are
-  plotted in ms, although the axis label reads "Time (s)".
+  `[0, latest spike]`). Neuron `n` is drawn on row `n`. Spike times are plotted in ms and the axis
+  is labelled "Time (ms)". (Up to SNNPlots 0.2.10 `markersize` was positional and the label read
+  "Time (s)".)
 - `raster(P, t; kwargs...)`: `P` is a population, a stimulus, or a `NamedTuple` of them (for
   example `model.pop`). Creates a `Figure` and an `Axis` and calls [`raster!`](@ref) with the same
   arguments; see there for the keyword arguments. Time is shown in seconds.
@@ -33,7 +34,7 @@ fig, ax, plt = SNN.raster(E, 0:1s)       # population method, time axis in s
 fig2, ax2, plt2 = SNN.raster(SNN.spiketimes(E))  # Spiketimes method
 ```
 """
-function raster(spiketimes::Spiketimes, t = nothing, markersize=1)
+function raster(spiketimes::Spiketimes, t = nothing, _markersize = 1; markersize = _markersize)
     t = isnothing(t) ? [0, maximum(vcat(spiketimes...))] : t
     X, Y = _raster(spiketimes, t)
     X, Y = resample_spikes(X, Y)
@@ -43,12 +44,12 @@ function raster(spiketimes::Spiketimes, t = nothing, markersize=1)
         markersize = markersize,
         color = :black,
         axis = (;
-            xlabel = "Time (s)",
+            xlabel = "Time (ms)",
             ylabel = "Neuron",
         ),
     )
     xlims!(ax, extrema(t))
-    isempty(Y) || ylims!(0, maximum(Y) + 1)
+    isempty(Y) || ylims!(ax, 0, maximum(Y) + 1)
     t = typeof(t) <: AbstractRange ? t[[1, end]] : t
     return Makie.FigureAxisPlot(fig, ax, plt)
 end
@@ -72,15 +73,16 @@ characters of their `name`. Keyword arguments:
   The x axis is in seconds (spike times are divided by `s`).
 - `populations`: if given, `P` must be a single population and `populations` a vector of index
   vectors; each index set is drawn as a separate group, labelled with `names`
-  (default `"pop_i"`). Without `populations`, `names` is ignored and the populations' `name`
-  fields are used.
+  (default `"pop_i"`). Without `populations`, `names` (if given) labels the populations,
+  otherwise their `name` fields are used.
 - `every = 1`: draw one spike out of `every`.
 - `markersize = 1`: marker size.
 - `order = []`: neuron order passed to the per-population raster.
-- other `kwargs` are ignored by the Makie backend.
+- other `kwargs` are passed to `Makie.scatter!`.
 
 Requires a `:fire` record on every population (`monitor!(pop, [:fire])`). The y-limits are set
-with `ylims!` on the current axis, which is `ax` only if `ax` is the most recently created axis.
+on `ax`. (Up to SNNPlots 0.2.10 they were set on the current axis, `names` was ignored without
+`populations`, the extra `kwargs` were dropped, and `raster!` was not exported.)
 
 # Example
 ```julia
@@ -92,7 +94,7 @@ SNN.monitor!([E, I], [:fire])
 SNN.sim!([E, I]; duration = 1s)
 fig = Figure()
 ax = Axis(fig[1, 1], xlabel = "Time (s)")
-SNNPlots.raster!(ax, (; E, I), 0:1s)   # raster! is not exported
+raster!(ax, (; E, I), 0:1s)
 ```
 """
 function raster!(ax::Axis, spiketimes::Spiketimes, t = nothing; markersize=1, order=nothing, kwargs...)
@@ -154,11 +156,12 @@ function raster!(
         y0 = Int32[0]
         X = Float32[]
         Y = Float32[]
+        user_names = names
         names = Vector{String}()
         P = typeof(P) <: AbstractPopulation ? [P] : [getfield(P, k) for k in keys(P)]
-        for p in P
+        for (k, p) in enumerate(P)
             x, y, _y0 = _raster(p, t; order)
-            push!(names, p.name)
+            push!(names, isnothing(user_names) ? p.name : string(user_names[k]))
             append!(X, x)
             append!(Y, y .+ sum(y0))
             isempty(_y0) ? push!(y0, p.N) : (y0 = vcat(y0, _y0))
@@ -177,7 +180,8 @@ function raster!(
         X[1:every:end],
         Y[1:every:end];
         color = :black,
-        markersize
+        markersize,
+        kwargs...,
     )
     t = typeof(t) <: AbstractRange ? t[[1, end]] : t
     if _backend == :Plots
@@ -193,7 +197,7 @@ function raster!(
         ax
         y0 = y0[1:(end)]
         !isempty(y0) && Makie.hlines!(ax, cumsum(y0), color = :red, linewidth = 1, label = "", linestyle = :dash)
-        isempty(Y) || ylims!(0, maximum(Y) + 1)
+        isempty(Y) || ylims!(ax, 0, maximum(Y) + 1)
         return plt
     end
 end

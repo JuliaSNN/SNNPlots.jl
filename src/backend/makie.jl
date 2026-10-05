@@ -77,7 +77,6 @@ macro makie_default()
     esc(:(SNNPlots.makie_default!()))
 end
 
-# Note: `default_colors` and `nature_figure` are exported but not defined in SNNPlots 0.2.10;
 # `inch` and `pt` are the `Measures` lengths; `cm` resolves to the SNNModels length unit
 # (`1cm == 1.0f0`, defined by `@load_units` in SNNPlots.jl), not to `Measures.cm`.
-export @makie_default, makie_default!, default_colors, inch, cm, pt, nature_figure, okabe_ito_10
+export @makie_default, makie_default!, inch, cm, pt, okabe_ito_10
