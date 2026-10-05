@@ -1,22 +1,43 @@
 """
-    plot_spatial_connectivity(fig, connectivity, config; ...)
+    plot_spatial_connectivity(fig, connectivity, config; post = :Exc, n0 = rand(1:20),
+                              do_arrows = true, rotation = :horizontal, xlabel = "",
+                              ylabel = "", do_legend = true)
 
-Visualizes the spatial layout of neuronal populations and their connections to a single postsynaptic neuron.
+Visualize the spatial layout of three neuronal populations and their connections to a single
+postsynaptic neuron (Makie).
 
-Plots all neurons from Exc, PV, SST populations with distinct markers. For a specified postsynaptic
-neuron (`n0` from population `post`), highlights all presynaptic neurons connected to it and draws
-arrows indicating those connections.
+Plots all neurons of the populations `:Exc`, `:PV`, `:SST` (hard-coded names, colours
+`okabe_ito_10[[8, 2, 3]]`, markers triangle/circle/hexagon). For the postsynaptic neuron `n0` of
+population `post`, highlights all presynaptic neurons connected to it (entries equal to 1 in the
+adjacency matrices) and draws lines from them to `n0`, which is marked with a cross.
+
+This function is tied to a specific spatial-network configuration layout and is not a generic
+SNNModels plot.
 
 # Arguments
-- `fig`: Makie figure or GridLayout position to plot into.
-- `connectivity`: structure containing neuron `points` (locations) and `links` (adjacency matrices).
-- `config`: network configuration, containing `network` and `spatial` properties.
-- `post::Symbol`: postsynaptic population (default: `:Exc`).
-- `n0::Int`: index of the target postsynaptic neuron.
-- `do_arrows::Bool`: draw connection arrows (default: `true`).
-- `rotation::Symbol`: `:horizontal` (default, x = tonotopic) or `:vertical` (swap x↔y axes).
-- `xlabel`, `ylabel`: axis labels for the x-data and y-data axes; default `""`. Swapped automatically
-  when `rotation = :vertical`. The Legend is unaffected by rotation.
+- `fig`: Makie figure or `GridLayout`; the axis is placed at `fig[1:2, 1:2]`, the legend at
+  `fig[0, 1:2]`.
+- `connectivity`: object with fields `points` (per-population vectors of neuron coordinates) and
+  `links` (adjacency matrices keyed by `Symbol(str_name(pre, post, compartment))`, indexed
+  `[post, pre]`).
+- `config`: configuration with `network` (fields `recurrence.connections`, `Npop`, `targets`) and
+  `spatial` (field `grid_size`).
+- `post::Symbol = :Exc`: postsynaptic population.
+- `n0::Int = rand(1:20)`: index of the postsynaptic neuron.
+- `do_arrows::Bool = true`: draw connection lines.
+- `rotation::Symbol = :horizontal`: `:horizontal` (x = first coordinate) or `:vertical`
+  (swap x and y).
+- `xlabel`, `ylabel`: labels of the x-data and y-data axes (default `""`), swapped automatically
+  when `rotation = :vertical`.
+- `do_legend::Bool = true`: draw the legend.
+
+Ticks are placed at `range(0, 0.1, 5)` and labelled `0, 0.25, ..., 1` (coordinates are assumed
+to lie in `[0, 0.1]`, i.e. 1 mm in the library unit system).
+
+# Returns
+The `Axis` if `do_legend = true`; otherwise the tuple `(ax, legend_info)` where `legend_info` is a
+`NamedTuple` with the legend elements, labels and placement options, to build the legend
+elsewhere.
 """
 function plot_spatial_connectivity(fig, connectivity, config;
         post      = :Exc,
@@ -98,20 +119,26 @@ end
 
 
 """
-    plot_connection_distances(fig; ds, rs)
+    plot_connection_distances(fig; ds, rs, probability = true)
 
-Computes and plots the distribution of connection distances for different presynaptic populations
-to the excitatory (`:Exc`) population.
+Plot the distribution of connection distances from the populations `:Exc`, `:PV`, `:SST` to the
+`:Exc` population (Makie). The distance histograms must be computed beforehand.
 
-This function calculates the periodic distance for every established connection from presynaptic
-populations (`:Exc`, `:PV`, `:SST`) to all postsynaptic `:Exc` neurons. It then generates two plots:
-1. A bar plot showing the binned connection counts (density).
-2. A line plot showing the connection probability, normalized by the area of the annulus at each distance.
+Generates two plots:
+1. `fig[1, 1]`: grouped bar plot of the normalised connection counts per distance bin
+   ("Conn. density").
+2. `fig[1, 2]` (only if `probability = true`): the counts divided by the squared bin edge and
+   normalised, as a proxy of the connection probability per unit area ("Conn. probability").
 
 # Arguments
-- `fig`: The Makie `Figure` object to plot into.
-- `ds`: A dictionary containing the binned connection counts for each presynaptic population.
-- `rs`: The edges of the distance bins used for histogramming the connection distances.
+- `fig`: the Makie `Figure` to plot into.
+- `ds`: dictionary of binned connection counts, keyed by `name(pre, :Exc)` for each `pre` in
+  `(:Exc, :PV, :SST)`.
+- `rs`: the bin edges (a range in the library length unit, cm); the x axis is shown in mm
+  (`rs * 10`).
+- `probability::Bool = true`: also draw the probability panel.
+
+Returns the result of the last `barplot!` call.
 """
 function plot_connection_distances(fig; ds, rs, probability = true)
 

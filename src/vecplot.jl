@@ -1,5 +1,42 @@
 # Vector plot
 using Statistics: quantile
+"""
+    vecplot(p, sym::Symbol; kwargs...)
+    vecplot(p, syms::Vector{Symbol}; interval = nothing, ylabel = "", title = "", kwargs...)
+    vecplot(p, sym, interval::AbstractRange; kwargs...)
+
+Plot the recorded time course of the variable(s) `sym` of the population (or connection,
+stimulus) `p` in a new Makie figure; returns a `Makie.FigureAxisPlot`.
+
+The variable must have been recorded with `monitor!(p, [sym])` before the simulation. One line is
+drawn per neuron (or one line for the population mean with `pop_average = true`); every keyword
+argument not listed here is forwarded to [`vecplot!`](@ref) (`neurons`, `pop_average`, `r`,
+`sym_id`, `factor`, `add_spikes`, `variables`, `lw`, `color`, `ribbon`, ...).
+
+- `interval`: time range in ms (e.g. `0:1:1000ms` or `0:1s`); default: the whole record.
+- `ylabel`, `title`: axis labels.
+
+The x axis data are in ms and the tick labels are shown in seconds.
+
+`vecplot(p, syms::Vector{Symbol})` draws all symbols in one axis. `vecplot(P::Array, sym::Symbol)`
+(one panel per population) and `vecplot(p, syms::Array)` with a vector that is not a
+`Vector{Symbol}` (e.g. `Any[:v, :w]`, one panel per symbol) stack the panels vertically and
+return the `Figure`. (Up to SNNPlots 0.2.10 they called the
+Plots.jl `plot(...; layout)` API and failed with Makie; the legend label of each line was
+always `"nothing"`.)
+
+# Example
+```julia
+using SpikingNeuralNetworks
+SNN.@load_units
+E = SNN.IF(N = 5, param = SNN.IFParameter(gl = 10nS, C = 200pF))
+SNN.monitor!(E, [:v])
+stim = SNN.CurrentStimulus(E; param = SNN.CurrentNoise(E; I_base = 300pA))
+model = SNN.compose(; E, stim)
+SNN.sim!(; model, duration = 200ms)
+fig, ax, plt = SNN.vecplot(E, :v, interval = 0:1:200ms, neurons = 1:2, ylabel = "V (mV)")
+```
+"""
 function vecplot(p, sym::Symbol; kwargs...)
     vecplot( p, [sym]; kwargs...)
 end
@@ -21,16 +58,20 @@ function vecplot(p, sym::Vector{Symbol}; interval=nothing, ylabel="", title="", 
         )
         plt = nothing
         for s in sym
-            plt = vecplot!(ax, p, s; interval, labels = [string(s)], kwargs...)
+            plt = vecplot!(ax, p, s; interval, label = string(s), kwargs...)
         end
         return Makie.FigureAxisPlot(f, ax, plt)
     end
 end
 
-function vecplot(P::Array, sym; kwargs...)
-    plts = [vecplot(p, sym; kwargs...) for p in P]
-    N = length(plts)
-    plot(plts..., size = (600, 400N), layout = (N, 1))
+function vecplot(P::Array, sym::Symbol; interval = nothing, ylabel = "", kwargs...)
+    N = length(P)
+    f = Figure(size = (600, 300N))
+    for (k, p) in enumerate(P)
+        ax = Axis(f[k, 1]; xlabel = "Time (s)", ylabel, title = string(p.name))
+        vecplot!(ax, p, sym; interval, kwargs...)
+    end
+    return f
 end
 
 vecplot(p, sym, interval::T; kwargs...) where {T<:AbstractRange} =
@@ -49,6 +90,53 @@ function _match_r(r, r_v)
     return r
 end
 
+"""
+    vecplot!(ax, p, sym; neurons = nothing, pop_average = false, interval = nothing, r = nothing,
+             sym_id = nothing, factor = 1.0f0, add_spikes = false, variables = nothing, lw = 2,
+             color = nothing, ribbon = false, label = nothing, kwargs...)
+    vecplot!(ax, p, sym::Symbol, interval::AbstractRange; kwargs...)
+
+Draw the recorded variable `sym` of `p` into the Makie axis `ax`; returns the last `lines!` plot.
+
+The record is read with `SNNModels.record(p, sym; variables, range = true)`, which returns an
+interpolated record and its time range.
+
+Keyword arguments:
+- `interval` (or `r`; `interval` has precedence): time range in ms at which the interpolated record
+  is sampled. Default: from the first to the last recorded time in steps of 1 ms. An error is
+  thrown if the range exceeds the recorded time.
+- `neurons`: neuron indices (an `Int` or a collection); default all.
+- `pop_average = false`: plot the mean over the selected neurons.
+- `ribbon = false`: with `pop_average = true`, also draw a band between the 20th and 80th
+  percentiles across neurons.
+- `sym_id`: required when the record is three-dimensional (e.g. one value per dendritic
+  compartment): index of the second dimension to plot.
+- `factor = 1.0f0`: scalar multiplying the trace, or the `Symbol` of another recorded variable
+  of `p` (sampled on the same times) or a `neurons x time` matrix to multiply it point-wise.
+  (Up to SNNPlots 0.2.10 the `Symbol` and `Matrix` forms threw.)
+- `add_spikes = false`: set the trace to 20 mV at the first sample after every spike (needs a
+  `:fire` record).
+- `variables`: forwarded to `record` (selects variables of a nested record).
+- `lw = 2`: line width; `color`: line colour (default: cycle through the theme palette by neuron
+  index); `label`: legend label (converted with `string`).
+- other `kwargs` are passed to `Makie.lines!`.
+
+x data are in ms; the six x ticks are relabelled in seconds.
+
+# Example
+```julia
+using SpikingNeuralNetworks, CairoMakie
+SNN.@load_units
+E = SNN.IF(N = 5, param = SNN.IFParameter(gl = 10nS, C = 200pF))
+SNN.monitor!(E, [:v])
+stim = SNN.CurrentStimulus(E; param = SNN.CurrentNoise(E; I_base = 300pA))
+model = SNN.compose(; E, stim)
+SNN.sim!(; model, duration = 200ms)
+fig = Figure()
+ax = Axis(fig[1, 1], ylabel = "V (mV)")
+SNN.vecplot!(ax, E, :v; pop_average = true, ribbon = true)
+```
+"""
 function vecplot!(
     ax,
     p,
@@ -76,14 +164,6 @@ function vecplot!(
     neurons = isnothing(neurons) ? axes(y, 1) : neurons
     neurons = isa(neurons, Int) ? [neurons] : neurons
     
-    if isa(factor, Symbol)
-        factor, _ = SNN.interpolated_record(p, factor)
-        factor = factor(neurons, r)
-    elseif isa(factor, Matrix)
-        factor = factor(neurons, :)
-        @assert size(factor, 1) == length(neurons) "The factor matrix must have the same number of rows as the number of neurons"
-        @assert size(factor, 2) == size(y, 2) "The factor matrix must have the same number of columns as the number of time points in the record"
-    end
 
 
     # check if the record is a vector or a matrix
@@ -96,6 +176,17 @@ function vecplot!(
         y = y(neurons, sym_id, r)
     else
         y = y(neurons, r)
+    end
+    y = reshape(y, length(neurons), length(r))
+
+    if isa(factor, Symbol)
+        f_itp, _ = SNNModels.interpolated_record(p, factor)
+        y = y .* reshape(f_itp(neurons, r), length(neurons), length(r))
+    elseif isa(factor, AbstractMatrix)
+        @assert size(factor) == size(y) "The factor matrix must be neurons x time points ($(size(y)))"
+        y = y .* factor
+    else
+        y = y .* factor
     end
     
 
@@ -139,8 +230,8 @@ function vecplot!(
         isnothing(band_down) || band!(
             ax,
             r,
-            (band_down) .* factor',
-            (band_up) .* factor',
+            band_down,
+            band_up,
             color = my_color(1),
             alpha= 0.7,
         )
@@ -149,10 +240,11 @@ function vecplot!(
             plt =  lines!(
                 ax,
                 r,
-                y[n, :] .* factor',
+                y[n, :];
                 color = my_color(n),
                 linewidth = lw,
                 label = string(label),
+                kwargs...,
             )
         end
 
@@ -161,10 +253,14 @@ function vecplot!(
     end
 end
 
-function vecplot(P, syms::Array; kwargs...)
-    plts = [vecplot(P, sym; kwargs...) for sym in syms]
-    N = length(plts)
-    plot(plts..., size = (600, 400N), layout = (N, 1))
+function vecplot(P, syms::Array; interval = nothing, kwargs...)
+    N = length(syms)
+    f = Figure(size = (600, 300N))
+    for (k, sym) in enumerate(syms)
+        ax = Axis(f[k, 1]; xlabel = "Time (s)", ylabel = string(sym))
+        vecplot!(ax, P, sym; interval, kwargs...)
+    end
+    return f
 end
 
 
