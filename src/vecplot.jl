@@ -1,5 +1,39 @@
 # Vector plot
 using Statistics: quantile
+"""
+    vecplot(p, sym::Symbol; kwargs...)
+    vecplot(p, syms::Vector{Symbol}; interval = nothing, ylabel = "", title = "", kwargs...)
+    vecplot(p, sym, interval::AbstractRange; kwargs...)
+
+Plot the recorded time course of the variable(s) `sym` of the population (or connection,
+stimulus) `p` in a new Makie figure; returns a `Makie.FigureAxisPlot`.
+
+The variable must have been recorded with `monitor!(p, [sym])` before the simulation. One line is
+drawn per neuron (or one line for the population mean with `pop_average = true`); every keyword
+argument not listed here is forwarded to [`vecplot!`](@ref) (`neurons`, `pop_average`, `r`,
+`sym_id`, `factor`, `add_spikes`, `variables`, `lw`, `color`, `ribbon`, ...).
+
+- `interval`: time range in ms (e.g. `0:1:1000ms` or `0:1s`); default: the whole record.
+- `ylabel`, `title`: axis labels.
+
+The x axis data are in ms and the tick labels are shown in seconds.
+
+The methods `vecplot(P::Array, sym)` and `vecplot(P, syms::Array)` (one panel per population or
+per symbol) call the Plots.jl `plot(...; layout)` API and do not work with the Makie backend used
+by SNNPlots 0.2.10.
+
+# Example
+```julia
+using SpikingNeuralNetworks
+SNN.@load_units
+E = SNN.IF(N = 5, param = SNN.IFParameter(gl = 10nS, C = 200pF))
+SNN.monitor!(E, [:v])
+stim = SNN.CurrentStimulus(E; param = SNN.CurrentNoise(E; I_base = 300pA))
+model = SNN.compose(; E, stim)
+SNN.sim!(; model, duration = 200ms)
+fig, ax, plt = SNN.vecplot(E, :v, interval = 0:1:200ms, neurons = 1:2, ylabel = "V (mV)")
+```
+"""
 function vecplot(p, sym::Symbol; kwargs...)
     vecplot( p, [sym]; kwargs...)
 end
@@ -49,6 +83,51 @@ function _match_r(r, r_v)
     return r
 end
 
+"""
+    vecplot!(ax, p, sym; neurons = nothing, pop_average = false, interval = nothing, r = nothing,
+             sym_id = nothing, factor = 1.0f0, add_spikes = false, variables = nothing, lw = 2,
+             color = nothing, ribbon = false, label = nothing, kwargs...)
+    vecplot!(ax, p, sym::Symbol, interval::AbstractRange; kwargs...)
+
+Draw the recorded variable `sym` of `p` into the Makie axis `ax`; returns the last `lines!` plot.
+
+The record is read with `SNNModels.record(p, sym; variables, range = true)`, which returns an
+interpolated record and its time range.
+
+Keyword arguments:
+- `interval` (or `r`; `interval` has precedence): time range in ms at which the interpolated record
+  is sampled. Default: from the first to the last recorded time in steps of 1 ms. An error is
+  thrown if the range exceeds the recorded time.
+- `neurons`: neuron indices (an `Int` or a collection); default all.
+- `pop_average = false`: plot the mean over the selected neurons.
+- `ribbon = false`: with `pop_average = true`, also draw a band between the 20th and 80th
+  percentiles across neurons.
+- `sym_id`: required when the record is three-dimensional (e.g. one value per dendritic
+  compartment): index of the second dimension to plot.
+- `factor = 1.0f0`: scalar multiplying the trace.
+- `add_spikes = false`: set the trace to 20 mV at the first sample after every spike (needs a
+  `:fire` record).
+- `variables`: forwarded to `record` (selects variables of a nested record).
+- `lw = 2`: line width; `color`: line colour (default: cycle through the theme palette by neuron
+  index); `label`: legend label (converted with `string`).
+- other `kwargs` are ignored by the Makie backend.
+
+x data are in ms; the six x ticks are relabelled in seconds.
+
+# Example
+```julia
+using SpikingNeuralNetworks, CairoMakie
+SNN.@load_units
+E = SNN.IF(N = 5, param = SNN.IFParameter(gl = 10nS, C = 200pF))
+SNN.monitor!(E, [:v])
+stim = SNN.CurrentStimulus(E; param = SNN.CurrentNoise(E; I_base = 300pA))
+model = SNN.compose(; E, stim)
+SNN.sim!(; model, duration = 200ms)
+fig = Figure()
+ax = Axis(fig[1, 1], ylabel = "V (mV)")
+SNN.vecplot!(ax, E, :v; pop_average = true, ribbon = true)
+```
+"""
 function vecplot!(
     ax,
     p,

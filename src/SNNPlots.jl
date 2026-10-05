@@ -1,3 +1,15 @@
+"""
+    SNNPlots
+
+Makie-based plotting for SNNModels: raster plots ([`raster`](@ref), [`raster!`](@ref)),
+recorded-variable traces ([`vecplot`](@ref), [`vecplot!`](@ref)), STDP kernels
+([`stdp_kernel`](@ref), [`stdp_kernel!`](@ref), [`stdp_test`](@ref)) and spatial-network plots
+([`plot_spatial_connectivity`](@ref), [`plot_connection_distances`](@ref)).
+
+SNNPlots depends on `Makie` only; load a Makie backend (`using CairoMakie` or `using GLMakie`) to
+display or save figures. The SNNPlots theme ([`makie_default!`](@ref)) is applied when the
+package is loaded.
+"""
 module SNNPlots
 
     using ColorSchemes
@@ -40,6 +52,8 @@ module SNNPlots
     include(joinpath(@__DIR__,"spatial.jl"))
 
     @load_units
+    # `plot`, `plot!` are re-exported from Makie and `save_model`, `load_model` from SNNModels;
+    # `plot_model`, `plot_stimulus`, `plot_connections` are not defined in SNNPlots 0.2.10.
     export raster,
         vecplot,
         plot,
