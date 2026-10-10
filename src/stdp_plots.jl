@@ -37,7 +37,8 @@ function stdp_test(stdp_param; ΔT)
     syn.g = zeros(Float32, post.N) # transmit into a dummy buffer: post fires only from its stimulus
     model = compose(; pre, post, stim_pre, stim_post, syn, silent = true)
     train!(model = model, duration = 400ms, dt = 0.1ms)
-    return model.syn[1].W[1] - 1
+    # read through the accessor: the weights of a rule that defers its update (vSTDPParameter) are not stored in `W`
+    return SNNModels.plasticity_value(model.syn[1], :W)[1] - 1
 end
 
 export stdp_test

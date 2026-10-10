@@ -334,7 +334,7 @@ Plot the synaptic weights of:
 
 """
 function plot_weights(network)
-    W = network.syn.I1_to_E.W
+    W = SNN.plasticity_value(network.syn.I1_to_E, :W)
     h_I1E = histogram(
         W,
         bins = minimum(W):(maximum(W)/200):(maximum(W)+1),
@@ -344,7 +344,7 @@ function plot_weights(network)
         yticks = :none,
         c = :black,
     )
-    W = network.syn.I2_to_E.W
+    W = SNN.plasticity_value(network.syn.I2_to_E, :W)
     h_I2E = histogram(
         W,
         bins = minimum(W):(maximum(W)/200):(maximum(W)+1),
@@ -355,8 +355,8 @@ function plot_weights(network)
         c = :black,
     )
     sc_w = scatter(
-        network.syn.I2_to_E.W,
-        network.syn.I1_to_E.W,
+        SNN.plasticity_value(network.syn.I2_to_E, :W),
+        SNN.plasticity_value(network.syn.I1_to_E, :W),
         xlabel = "Synaptic weight from I2 to E",
         ylabel = "Synaptic weight from I1 to E",
         alpha = 0.01,
@@ -805,7 +805,7 @@ function mutual_EI_connections(synapses, forward = :I1_to_E, feedback = :E_to_I1
     feedback_conn = getfield(synapses, feedback)
     for s in eachindex(synapses.I1_to_E.W)
         @unpack I, colptr = feedback_conn
-        @unpack W = forward_conn
+        W = SNN.plasticity_value(forward_conn, :W)
         inh_pre, exc_j = forward_conn.J[s], forward_conn.I[s]
         all_inh_posts = I[colptr[exc_j]:(colptr[exc_j+1]-1)]
         if inh_pre in all_inh_posts
