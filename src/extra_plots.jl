@@ -803,6 +803,7 @@ function mutual_EI_connections(synapses, forward = :I1_to_E, feedback = :E_to_I1
     unidirectional = []
     forward_conn = getfield(synapses, forward)
     feedback_conn = getfield(synapses, feedback)
+    SNNModels.ensure_transpose!(forward_conn)   # J is built only when read (SNNModels 1.10)
     for s in eachindex(synapses.I1_to_E.W)
         @unpack I, colptr = feedback_conn
         W = SNN.plasticity_value(forward_conn, :W)
